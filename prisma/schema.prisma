@@ -1,0 +1,46 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model phones {
+  id      Int     @id @default(autoincrement())
+  brand   String  @db.VarChar(50)
+  model   String  @db.VarChar(50)
+  price   Decimal @db.Decimal(10, 2)
+  storage Int
+  ram     Int
+  battery Int
+  os      String  @db.VarChar(50)
+}
+
+model users {
+  id       Int      @id @default(autoincrement())
+  username String   @unique(map: "username") @db.VarChar(50)
+  password String   @db.VarChar(255)
+  role     String   @db.VarChar(20)
+  orders   orders[]
+}
+
+model orders {
+  id          BigInt    @id @unique(map: "id") @default(autoincrement()) @db.UnsignedBigInt
+  user_id     Int
+  phone       String    @db.VarChar(255)
+  total_price Decimal   @db.Decimal(10, 2)
+  address     String    @db.Text
+  created_at  DateTime? @default(now()) @db.Timestamp(0)
+  users       users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "orders_ibfk_1")
+
+  @@index([user_id], map: "user_id")
+}
+
+model products {
+  id          BigInt  @id @unique(map: "id") @default(autoincrement()) @db.UnsignedBigInt
+  name        String  @db.VarChar(100)
+  price       Decimal @db.Decimal(10, 2)
+  description String? @db.Text
+}
