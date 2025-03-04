@@ -49,21 +49,20 @@ export class OrderService {
 
   // Post order (user & admin)
   async postOrder(body: CreateOrderDto, user: any) {
+    if (!user || !user.id) {
+      throw new BadRequestException(
+        'User chưa đăng nhập hoặc token không hợp lệ',
+      );
+    }
+
+    const phone = await this.prisma.phones.findFirst({
+      where: { model: body.phone },
+    });
+
+    if (!phone) {
+      throw new BadRequestException('Điện thoại không tồn tại');
+    }
     try {
-      if (!user || !user.id) {
-        throw new BadRequestException(
-          'User chưa đăng nhập hoặc token không hợp lệ',
-        );
-      }
-
-      const phone = await this.prisma.phones.findFirst({
-        where: { model: body.phone },
-      });
-
-      if (!phone) {
-        throw new BadRequestException('Điện thoại không tồn tại');
-      }
-
       // Lấy giá của điện thoại từ cơ sở dữ liệu, không cho phép người dùng thay đổi
       const totalPrice = phone.price;
 

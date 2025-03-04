@@ -29,27 +29,26 @@ export class AuthService {
   async signUp(register: RegisterDto) {
     const { username, password, role } = register;
 
-    const userExist = await this.prisma.users.findFirst({
-      where: {
-        username: username,
-      },
+    // Kiểm tra username đã tồn tại chưa
+    const userExist = await this.prisma.users.findUnique({
+      where: { username },
     });
 
-    if (userExist)
-      throw new BadRequestException('username đã tồn tại,vui lòng đăng nhập');
-    // console.log({ userExist });
-    //  Mã hóa password
-    const hashPassword = bcrypt.hashSync(password, 10);
+    if (userExist) {
+      throw new BadRequestException('Username đã tồn tại, vui lòng đăng nhập');
+    }
 
-    // Tạo người dùng mới ( tạo dữ liệu vào trong db)
+    // Mã hóa mật khẩu bất đồng bộ
+    const hashPassword = await bcrypt.hash(password, 10);
+
+    // Tạo người dùng mới
     const userNew = await this.prisma.users.create({
       data: {
-        username: username,
-        role: role,
+        username,
+        role,
         password: hashPassword,
       },
     });
-    // console.log(userNew);
 
     return responseSuccess(userNew, 'Đăng ký thành công', 200);
   }
@@ -59,13 +58,13 @@ export class AuthService {
   async signIn(login: LoginDto) {
     const { username, password, accessToken } = login;
 
-    // Nếu có accessToken,xác thực
+    // Nếu có accessToken, xác thực ngay
     if (accessToken) {
       try {
         const decoded = this.jwtService.verify(accessToken);
-        const userExist = await this.prisma.users.findFirst({
+        const userExist = await this.prisma.users.findUnique({
           where: { id: decoded.id },
-          select: { username: true, id: true, password: true },
+          select: { username: true, id: true, password: true, role: true },
         });
 
         if (!userExist) throw new BadRequestException('Token không hợp lệ');
@@ -75,59 +74,42 @@ export class AuthService {
       }
     }
 
-    const userExist = await this.prisma.users.findFirst({
-      where: {
-        username: username,
-      },
-      select: {
-        username: true,
-        id: true,
-        password: true,
-        role: true,
-      },
+    // Kiểm tra xem user có tồn tại không
+    const userExist = await this.prisma.users.findUnique({
+      where: { username },
+      select: { username: true, id: true, password: true, role: true },
     });
 
-    if (!userExist)
-      throw new BadRequestException('user không hợp lệ, vui lòng đăng ký');
+    if (!userExist) {
+      throw new BadRequestException('User không hợp lệ, vui lòng đăng ký');
+    }
 
-    // Check Password
-    const passHash = userExist.password;
-    const isPassword = bcrypt.compareSync(password, passHash);
-    if (!isPassword) throw new BadRequestException('Mật khẩu không chính xác');
-    console.log(passHash), console.log(isPassword);
+    // Kiểm tra mật khẩu
+    const isPasswordValid = await bcrypt.compare(password, userExist.password);
 
-    // create token and refreshToken
-    const newAccessToken = this.jwtService.sign(
-      {
-        id: userExist.id,
-        role: userExist.role,
-      },
-      {
-        expiresIn: '5m',
-      },
-    );
+    if (!isPasswordValid) {
+      throw new BadRequestException('Mật khẩu không chính xác');
+    }
 
-    const refreshToken = this.jwtService.sign(
-      {
-        id: userExist.id,
-        role: userExist.role,
-      },
-      {
-        expiresIn: '7d',
-      },
-    );
+    // Tạo accessToken & refreshToken
+    const payload = { id: userExist.id, role: userExist.role };
 
-    return responseSuccess(
-      { accessToken: newAccessToken, refreshToken },
+    const newAccessToken = this.jwtService.sign(payload, { expiresIn: '5m' });
+    const refreshToken = this.jwtService.sign(payload, { expiresIn: '7d' });
+
+    const result = responseSuccess(
+      { accessToken: newAccessToken, refreshToken: refreshToken },
       'Đăng nhập thành công',
       200,
     );
+    console.log('Response Success:', result);
+    return result;
   }
 
   // * Role *
 
   async getRole(adminUsername: string, userUsername?: string) {
-    const admin = await this.prisma.users.findFirst({
+    const admin = await this.prisma.users.findUnique({
       where: { username: adminUsername },
     });
     if (!admin) {
@@ -146,7 +128,7 @@ export class AuthService {
       return users;
     }
     // Nếu admin cung cấp user hoặc user tự kiểm tra mình
-    const targetUser = await this.prisma.users.findFirst({
+    const targetUser = await this.prisma.users.findUnique({
       where: {
         username: userUsername || adminUsername,
       },

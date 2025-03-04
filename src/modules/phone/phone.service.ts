@@ -32,14 +32,12 @@ export class PhoneService {
 
   // post phone
   async postPhone(body: CreatePhoneDto, user: any) {
-    console.log('User', user);
+    if (!user || !user.id) {
+      throw new UnauthorizedException(
+        'User chưa đăng nhập hoặc token không hợp lệ',
+      );
+    }
     try {
-      if (!user || !user.id) {
-        throw new UnauthorizedException(
-          'User chưa đăng nhập hoặc token không hợp lệ',
-        );
-      }
-
       // Tạo điện thoại mới
       const newPhone = await this.prisma.phones.create({
         data: {
@@ -76,17 +74,15 @@ export class PhoneService {
       throw new BadRequestException('ID phải là số');
     }
 
+    const phone = await this.prisma.phones.findUnique({
+      where: { id: number },
+    });
+
+    if (!phone) {
+      throw new BadRequestException(`Phone với ID = ${number} không tồn tại.`);
+    }
+
     try {
-      const phone = await this.prisma.phones.findUnique({
-        where: { id: number },
-      });
-
-      if (!phone) {
-        throw new BadRequestException(
-          `Phone với ID = ${number} không tồn tại.`,
-        );
-      }
-
       const updatedPhone = await this.prisma.phones.update({
         where: { id: number },
         data: {
@@ -119,17 +115,15 @@ export class PhoneService {
       throw new BadRequestException('ID phải là số');
     }
 
+    const phone = await this.prisma.phones.findUnique({
+      where: { id: number },
+    });
+
+    if (!phone) {
+      throw new BadRequestException(`Phone với ID = ${number} không tồn tại.`);
+    }
+
     try {
-      const phone = await this.prisma.phones.findUnique({
-        where: { id: number },
-      });
-
-      if (!phone) {
-        throw new BadRequestException(
-          `Phone với ID = ${number} không tồn tại.`,
-        );
-      }
-
       const removePhone = await this.prisma.phones.delete({
         where: { id: number },
       });
@@ -142,7 +136,7 @@ export class PhoneService {
       );
     } catch (error) {
       console.error(error);
-      throw new BadRequestException(` Không tìm thấy phone với id = ${number}`);
+      throw new BadRequestException(`Không tìm thấy phone với id = ${number}`);
     }
   }
 }
