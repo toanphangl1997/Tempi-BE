@@ -7,6 +7,7 @@ export class CreatePhoneDto {
   // @IsNumber({}, { message: 'ID phải là số' })
   // id: number;
   // id: number;
+  // id: number;
 
   @ApiProperty({ description: 'Tên brand' })
   @IsNotEmpty({ message: 'brand không được để trống' })
