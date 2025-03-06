@@ -1,0 +1,29 @@
+
+services:
+  be_compose:
+    image: toanphangl1997/img_be_phone:latest
+    container_name: cons-phone_be
+    ports:
+      - "3070:4000"
+    depends_on:
+      - mysql-compose
+    command: ["npm", "run", "start:dev"]
+    environment:
+      - DATABASE_URL=mysql://root:root_1234@mysql-compose:3306/phone_db
+    networks:
+      - app-network
+
+  mysql-compose:
+    image: mysql
+    container_name: some-mysql-compose
+    environment:
+      - MYSQL_ROOT_PASSWORD=root_1234
+      - MYSQL_DATABASE=phone_db
+    ports:
+      - "3307:3306"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge

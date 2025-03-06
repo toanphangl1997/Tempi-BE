@@ -1,0 +1,24 @@
+# Đặt tên
+name: CI docker
+
+# Khi nào chạy
+on:
+  push:
+    branches: ['master']
+
+# Chạy công việc gì
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Đăng nhập vào docker
+        run: docker login -u toanphangl1997 -p ${{secrets.PASS_DOCKER}}
+
+      - name: build image
+        run: docker build . -t toanphangl1997/img_be_phone:latest
+
+      - name: push image lên docker hub
+        run: docker push toanphangl1997/img_be_phone:latest
